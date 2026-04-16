@@ -1,0 +1,12 @@
+# dependencies
+node_modules/
+
+# local env and secrets
+.env
+.env*.local
+firebaseServiceAccount.json
+
+# logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
