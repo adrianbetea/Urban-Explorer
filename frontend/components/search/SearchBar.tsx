@@ -1,17 +1,20 @@
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, TextInputProps, View } from 'react-native';
 
 type SearchBarProps = {
 	value: string;
 	onChangeText: (value: string) => void;
+	onSubmitEditing?: TextInputProps['onSubmitEditing'];
+	placeholder?: string;
 };
 
-export function SearchBar({ value, onChangeText }: SearchBarProps) {
+export function SearchBar({ value, onChangeText, onSubmitEditing, placeholder = 'Search city' }: SearchBarProps) {
 	return (
 		<View style={styles.container}>
 			<TextInput
 				value={value}
 				onChangeText={onChangeText}
-				placeholder="Search city"
+				onSubmitEditing={onSubmitEditing}
+				placeholder={placeholder}
 				placeholderTextColor="#8D99A8"
 				style={styles.input}
 			/>

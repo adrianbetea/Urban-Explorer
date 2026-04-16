@@ -6,6 +6,14 @@ type SearchResultsContainerProps = {
 };
 
 export function SearchResultsContainer({ cities, onCityPress }: SearchResultsContainerProps) {
+	if (!cities.length) {
+		return (
+			<View style={styles.container}>
+				<Text style={styles.emptyText}>No city found. Try another query.</Text>
+			</View>
+		);
+	}
+
 	return (
 		<View style={styles.container}>
 			{cities.map((city) => (
@@ -47,5 +55,10 @@ const styles = StyleSheet.create({
 		color: '#1A73E8',
 		fontSize: 13,
 		fontWeight: '700',
+	},
+	emptyText: {
+		color: '#526273',
+		fontSize: 14,
+		paddingVertical: 10,
 	},
 });

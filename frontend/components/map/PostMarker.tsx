@@ -1,15 +1,19 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { LatLng, Marker } from 'react-native-maps';
 
 type PostMarkerProps = {
+	coordinate: LatLng;
 	label: string;
 	onPress: () => void;
 };
 
-export function PostMarker({ label, onPress }: PostMarkerProps) {
+export function PostMarker({ coordinate, label, onPress }: PostMarkerProps) {
 	return (
-		<Pressable onPress={onPress} style={({ pressed }) => [styles.marker, pressed && styles.pressed]}>
-			<Text style={styles.text}>{label}</Text>
-		</Pressable>
+		<Marker coordinate={coordinate} onPress={onPress} tracksViewChanges={false}>
+			<View style={styles.marker}>
+				<Text style={styles.text}>{label}</Text>
+			</View>
+		</Marker>
 	);
 }
 
@@ -21,9 +25,6 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		paddingHorizontal: 9,
 		paddingVertical: 5,
-	},
-	pressed: {
-		opacity: 0.85,
 	},
 	text: {
 		color: '#0E2238',

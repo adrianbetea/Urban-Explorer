@@ -4,6 +4,7 @@ const { db, firestoreDatabaseId } = require('./routes/firebase');
 const postRoutes = require('./routes/posts-routes');
 const authRoutes = require('./routes/auth-routes');
 const oauthRoutes = require('./routes/oauth-routes');
+const placesRoutes = require('./routes/places-routes');
 
 const PORT = process.env.PORT || 3000;
 
@@ -13,6 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/posts', postRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/oauth', oauthRoutes);
+app.use('/api/places', placesRoutes);
 
 // Add this test route to your Express app
 app.get('/test-firebase', async (req, res) => {

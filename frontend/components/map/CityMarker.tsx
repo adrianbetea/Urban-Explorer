@@ -1,31 +1,32 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import { Callout, LatLng, Marker } from 'react-native-maps';
 
 type CityMarkerProps = {
 	city: string;
+	coordinate: LatLng;
 	onPress: () => void;
+	selected: boolean;
 };
 
-export function CityMarker({ city, onPress }: CityMarkerProps) {
+export function CityMarker({ city, coordinate, onPress, selected }: CityMarkerProps) {
 	return (
-		<Pressable onPress={onPress} style={({ pressed }) => [styles.pin, pressed && styles.pressed]}>
-			<Text style={styles.text}>{city}</Text>
-		</Pressable>
+		<Marker coordinate={coordinate} onPress={onPress} pinColor={selected ? '#1A73E8' : '#5A6B7D'} title={city}>
+			<Callout tooltip>
+				<Text style={styles.callout}>{city}</Text>
+			</Callout>
+		</Marker>
 	);
 }
 
 const styles = StyleSheet.create({
-	pin: {
-		backgroundColor: '#1A73E8',
-		borderRadius: 999,
-		paddingHorizontal: 10,
-		paddingVertical: 6,
-	},
-	pressed: {
-		opacity: 0.85,
-	},
-	text: {
+	callout: {
+		backgroundColor: '#0E2238',
+		borderRadius: 8,
 		color: '#FFFFFF',
 		fontSize: 12,
 		fontWeight: '700',
+		overflow: 'hidden',
+		paddingHorizontal: 8,
+		paddingVertical: 6,
 	},
 });

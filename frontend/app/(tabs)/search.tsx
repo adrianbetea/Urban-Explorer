@@ -5,13 +5,20 @@ import { SafeAreaView, StyleSheet, Text } from 'react-native';
 import { SearchBar } from '@/components/search/SearchBar';
 import { SearchResultsContainer } from '@/components/search/SearchResultsContainer';
 import { TrendingCitiesList } from '@/components/search/TrendingCitiesList';
-import { getPosts } from '@/services/api';
+import { getPosts, searchCitySuggestions } from '@/services/api';
 
 const FALLBACK_CITIES = ['Bucharest', 'Cluj-Napoca', 'Timisoara', 'Iasi', 'Brasov', 'Constanta'];
+
+function normalizeCountryCode(rawValue: string | undefined) {
+	const value = (rawValue || '').trim();
+	return /^[a-zA-Z]{2}$/.test(value) ? value.toLowerCase() : '';
+}
 
 export default function SearchScreen() {
 	const [query, setQuery] = useState('');
 	const [cities, setCities] = useState<string[]>(FALLBACK_CITIES);
+	const [suggestions, setSuggestions] = useState<string[]>([]);
+	const countryCode = normalizeCountryCode(process.env.EXPO_PUBLIC_GOOGLE_PLACES_COUNTRY);
 
 	useEffect(() => {
 		const loadCities = async () => {
@@ -37,6 +44,38 @@ export default function SearchScreen() {
 		loadCities();
 	}, []);
 
+	useEffect(() => {
+		const trimmedQuery = query.trim();
+
+		if (trimmedQuery.length < 2) {
+			setSuggestions([]);
+			return;
+		}
+
+		const timeoutId = setTimeout(async () => {
+			try {
+				const payload = await searchCitySuggestions(trimmedQuery, {
+					country: countryCode,
+					types: '(cities)',
+				});
+
+				const nextSuggestions = Array.from(
+					new Set(
+						(payload?.data || [])
+							.map((item: { description?: string; mainText?: string }) => item.mainText || item.description || '')
+							.filter(Boolean)
+					)
+				);
+
+				setSuggestions(nextSuggestions);
+			} catch {
+				setSuggestions([]);
+			}
+		}, 350);
+
+		return () => clearTimeout(timeoutId);
+	}, [countryCode, query]);
+
 	const filteredCities = useMemo(() => {
 		const q = query.trim().toLowerCase();
 		if (!q) {
@@ -44,6 +83,14 @@ export default function SearchScreen() {
 		}
 		return cities.filter((city) => city.toLowerCase().includes(q));
 	}, [cities, query]);
+
+	const displayedResults = useMemo(() => {
+		if (query.trim().length < 2) {
+			return filteredCities;
+		}
+
+		return Array.from(new Set([...suggestions, ...filteredCities]));
+	}, [filteredCities, query, suggestions]);
 
 	const goToCityFeed = (city: string) => {
 		router.push({ pathname: '/city-feed', params: { city } });
@@ -60,7 +107,7 @@ export default function SearchScreen() {
 			<TrendingCitiesList cities={cities.slice(0, 4)} onCityPress={goToCityFeed} />
 
 			<Text style={styles.sectionTitle}>Results</Text>
-			<SearchResultsContainer cities={filteredCities} onCityPress={goToCityFeed} />
+			<SearchResultsContainer cities={displayedResults} onCityPress={goToCityFeed} />
 		</SafeAreaView>
 	);
 }

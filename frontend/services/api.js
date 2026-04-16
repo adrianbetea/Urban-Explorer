@@ -122,3 +122,24 @@ export async function oauthSignIn(provider, idToken) {
 
   return handleResponse(response);
 }
+
+export async function searchCitySuggestions(input, options = {}) {
+  const params = new URLSearchParams({ input });
+
+  if (options.country) {
+    params.set('country', options.country);
+  }
+
+  if (options.types) {
+    params.set('types', options.types);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/places/autocomplete?${params.toString()}`);
+  return handleResponse(response);
+}
+
+export async function getPlaceDetails(placeId) {
+  const params = new URLSearchParams({ placeId });
+  const response = await fetch(`${API_BASE_URL}/places/details?${params.toString()}`);
+  return handleResponse(response);
+}
