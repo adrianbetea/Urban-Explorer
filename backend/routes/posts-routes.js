@@ -104,21 +104,52 @@ router.get('/', async (req, res) => {
 // Feed filtered by city for Map and Search pages.
 router.get('/city/:cityName', async (req, res) => {
     try {
-        const cityName = req.params.cityName;
+        const cityName = (req.params.cityName || '').trim();
+        if (!cityName) {
+            return res.status(400).json({ error: 'City name is required.' });
+        }
 
-        const snapshot = await db
-            .collection('posts')
-            .where('location.city', '==', cityName)
-            .orderBy('createdAt', 'desc')
-            .get();
+        const buildPosts = (snapshot) =>
+            snapshot.docs.map((doc) => ({
+                postId: doc.id,
+                ...doc.data(),
+                score: (doc.data().upvotes || 0) - (doc.data().downvotes || 0),
+            }));
 
-        const posts = snapshot.docs.map((doc) => ({
-            postId: doc.id,
-            ...doc.data(),
-            score: (doc.data().upvotes || 0) - (doc.data().downvotes || 0),
-        }));
+        const getCreatedAtMillis = (value) => {
+            if (!value) return 0;
+            if (typeof value.toMillis === 'function') return value.toMillis();
+            if (typeof value === 'number') return value;
+            const parsed = Date.parse(value);
+            return Number.isNaN(parsed) ? 0 : parsed;
+        };
 
-        return res.status(200).json({ city: cityName, count: posts.length, data: posts });
+        try {
+            const snapshot = await db
+                .collection('posts')
+                .where('location.city', '==', cityName)
+                .orderBy('createdAt', 'desc')
+                .get();
+
+            const posts = buildPosts(snapshot);
+            return res.status(200).json({ city: cityName, count: posts.length, data: posts });
+        } catch (error) {
+            if (error?.code !== 9) {
+                throw error;
+            }
+
+            console.warn('City posts query missing index; falling back to in-memory sort.');
+            const fallbackSnapshot = await db
+                .collection('posts')
+                .where('location.city', '==', cityName)
+                .get();
+
+            const posts = buildPosts(fallbackSnapshot).sort((a, b) => {
+                return getCreatedAtMillis(b.createdAt) - getCreatedAtMillis(a.createdAt);
+            });
+
+            return res.status(200).json({ city: cityName, count: posts.length, data: posts, fallback: true });
+        }
     } catch (error) {
         console.error('Error fetching city posts:', error);
         return res.status(500).json({ error: 'Failed to fetch city posts. ' + error.message });

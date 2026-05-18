@@ -12,6 +12,7 @@ type BackendPost = {
   id?: string;
   username?: string;
   description?: string;
+  imageUrl?: string;
   location?: {
     city?: string;
   };
@@ -30,6 +31,7 @@ function toExplorePost(post: BackendPost): ExplorePost {
     username: post.username || 'Explorer',
     city: post.location?.city || post.city || 'Unknown Location',
     description: post.description || '',
+    imageUrl: post.imageUrl,
     score: post.score ?? upvotes - downvotes,
   };
 }
