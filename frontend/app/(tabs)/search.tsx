@@ -62,7 +62,7 @@ export default function SearchScreen() {
 				const nextSuggestions = Array.from(
 					new Set(
 						(payload?.data || [])
-							.map((item: { description?: string; mainText?: string }) => item.mainText || item.description || '')
+							.map((item: { description?: string; mainText?: string }) => item.description || item.mainText || '')
 							.filter(Boolean)
 					)
 				);
@@ -93,7 +93,8 @@ export default function SearchScreen() {
 	}, [filteredCities, query, suggestions]);
 
 	const goToCityFeed = (city: string) => {
-		router.push({ pathname: '/city-feed', params: { city } });
+		const cityName = city.split(',')[0].trim();
+		router.push({ pathname: '/city-feed', params: { city: cityName } });
 	};
 
 	return (

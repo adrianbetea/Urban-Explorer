@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { LatLng } from 'react-native-maps';
@@ -26,6 +26,7 @@ function normalizeCountryCode(rawValue: string | undefined) {
 }
 
 export default function MapScreen() {
+	const params = useLocalSearchParams<{ city?: string }>();
 	const [activeCity, setActiveCity] = useState('Bucharest');
 	const [cityCoordinates, setCityCoordinates] = useState<Record<string, LatLng>>({});
 	const [knownCities, setKnownCities] = useState<string[]>(Object.keys(CITY_PREVIEWS));
@@ -33,6 +34,14 @@ export default function MapScreen() {
 	const [mapSuggestions, setMapSuggestions] = useState<CitySuggestion[]>([]);
 	const [previews, setPreviews] = useState<string[]>([]);
 	const countryCode = normalizeCountryCode(process.env.EXPO_PUBLIC_GOOGLE_PLACES_COUNTRY);
+
+	useEffect(() => {
+		if (params.city) {
+			const city = params.city.trim();
+			setActiveCity(city);
+			setKnownCities((prev) => (prev.includes(city) ? prev : [city, ...prev]));
+		}
+	}, [params.city]);
 
 	useEffect(() => {
 		const loadCityPosts = async () => {
@@ -72,7 +81,7 @@ export default function MapScreen() {
 					types: '(cities)',
 				});
 
-				const suggestions = (payload?.data || []).map((item: CitySuggestion) => ({
+				const suggestions = (payload?.data || []).map((item: CitySuggestion & { secondaryText?: string }) => ({
 					description: item.description || item.mainText || '',
 					mainText: item.mainText || item.description || '',
 					placeId: item.placeId,
@@ -138,10 +147,7 @@ export default function MapScreen() {
 					<View style={styles.suggestionsCard}>
 						{mapSuggestions.slice(0, 5).map((suggestion) => (
 							<Pressable key={suggestion.placeId} onPress={() => void selectCitySuggestion(suggestion)} style={({ pressed }) => [styles.suggestionRow, pressed && styles.suggestionPressed]}>
-								<Text style={styles.suggestionMain}>{suggestion.mainText}</Text>
-								<Text numberOfLines={1} style={styles.suggestionSecondary}>
-									{suggestion.description}
-								</Text>
+							<Text style={styles.suggestionMain}>{suggestion.description}</Text>
 							</Pressable>
 						))}
 					</View>

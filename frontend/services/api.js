@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { getSession } from '@/services/session';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -28,14 +29,23 @@ export async function getPostsByUser(uid) {
   return handleResponse(response);
 }
 
-export async function createPost({ imageUri, description, latitude, longitude, city, userId, username }) {
+export async function createPost({ imageUris, description, latitude, longitude, city, userId, username }) {
   const formData = new FormData();
 
-  formData.append('image', {
-    uri: imageUri,
-    name: `upload-${Date.now()}.jpg`,
-    type: 'image/jpeg',
-  });
+  for (let index = 0; index < imageUris.length; index++) {
+    const uri = imageUris[index];
+    if (Platform.OS === 'web') {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      formData.append('images', blob, `upload-${Date.now()}-${index}.jpg`);
+    } else {
+      formData.append('images', {
+        uri,
+        name: `upload-${Date.now()}-${index}.jpg`,
+        type: 'image/jpeg',
+      });
+    }
+  }
 
   formData.append('description', description || '');
   formData.append('latitude', String(latitude ?? 0));

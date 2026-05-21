@@ -1,46 +1,77 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-type UserPostsGridProps = {
-	posts: string[];
-	onPostPress: (postId: string) => void;
+import { ImageGallery } from '@/components/explore/ImageGallery';
+import { InteractionBar } from '@/components/explore/InteractionBar';
+import { PostDescription } from '@/components/explore/PostDescription';
+import { PostHeader } from '@/components/explore/PostHeader';
+
+export type UserPost = {
+	postId: string;
+	username?: string;
+	description?: string;
+	imageUrl?: string;
+	imageUrls?: string[];
+	location?: { city?: string };
+	upvotes?: number;
+	downvotes?: number;
 };
 
-export function UserPostsGrid({ posts, onPostPress }: UserPostsGridProps) {
+type UserPostsGridProps = {
+	posts: UserPost[];
+	onEditPress: (postId: string) => void;
+	onVote?: (postId: string, delta: 1 | -1) => void;
+};
+
+export function UserPostsGrid({ posts, onEditPress, onVote }: UserPostsGridProps) {
 	return (
-		<View style={styles.grid}>
-			{posts.map((post) => (
-				<Pressable key={post} onPress={() => onPostPress(post)} style={({ pressed }) => [styles.tile, pressed && styles.pressed]}>
-					<Text style={styles.text}>{post}</Text>
-				</Pressable>
-			))}
+		<View style={styles.list}>
+			{posts.map((post) => {
+				const score = (post.upvotes || 0) - (post.downvotes || 0);
+				return (
+					<View key={post.postId} style={styles.card}>
+						<View style={styles.cardHeader}>
+							<PostHeader username={post.username || 'You'} city={post.location?.city || ''} />
+							<Pressable onPress={() => onEditPress(post.postId)} style={styles.editButton}>
+								<Text style={styles.editIcon}>✏️</Text>
+							</Pressable>
+						</View>
+						<ImageGallery imageUrls={post.imageUrls?.length ? post.imageUrls : post.imageUrl ? [post.imageUrl] : []} />
+						<PostDescription description={post.description || ''} />
+						<InteractionBar
+							score={score}
+							onUpvote={() => onVote?.(post.postId, 1)}
+							onDownvote={() => onVote?.(post.postId, -1)}
+						/>
+					</View>
+				);
+			})}
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
-	grid: {
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		gap: 8,
+	list: {
+		gap: 16,
 		paddingHorizontal: 16,
 		paddingTop: 12,
 	},
-	tile: {
-		alignItems: 'center',
+	card: {
 		backgroundColor: '#FFFFFF',
 		borderColor: '#D8E3EE',
-		borderRadius: 10,
+		borderRadius: 16,
 		borderWidth: 1,
-		height: 92,
-		justifyContent: 'center',
-		width: '31%',
+		gap: 12,
+		padding: 12,
 	},
-	pressed: {
-		opacity: 0.85,
+	cardHeader: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'flex-start',
 	},
-	text: {
-		color: '#0E2238',
-		fontSize: 12,
-		textAlign: 'center',
+	editButton: {
+		padding: 4,
+	},
+	editIcon: {
+		fontSize: 18,
 	},
 });

@@ -7,7 +7,7 @@ type TrendingCitiesListProps = {
 
 export function TrendingCitiesList({ cities, onCityPress }: TrendingCitiesListProps) {
 	return (
-		<ScrollView horizontal contentContainerStyle={styles.content} showsHorizontalScrollIndicator={false}>
+		<ScrollView horizontal style={styles.list} contentContainerStyle={styles.content} showsHorizontalScrollIndicator={false}>
 			{cities.map((city) => (
 				<Pressable key={city} onPress={() => onCityPress(city)} style={({ pressed }) => [styles.chip, pressed && styles.pressed]}>
 					<Text style={styles.text}>{city}</Text>
@@ -18,7 +18,11 @@ export function TrendingCitiesList({ cities, onCityPress }: TrendingCitiesListPr
 }
 
 const styles = StyleSheet.create({
+	list: {
+		flexGrow: 0,
+	},
 	content: {
+		alignItems: 'center',
 		gap: 8,
 		paddingHorizontal: 16,
 		paddingTop: 10,

@@ -4,13 +4,15 @@ import { Alert, SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native'
 
 import { PostOptionsModal } from '@/components/profile/PostOptionsModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
-import { UserPostsGrid } from '@/components/profile/UserPostsGrid';
+import { UserPostsGrid, UserPost } from '@/components/profile/UserPostsGrid';
 import { getPostsByUser } from '@/services/api';
 import { getSession } from '@/services/session';
 
 type BackendPost = {
 	postId?: string;
 	description?: string;
+	imageUrl?: string;
+	imageUrls?: string[];
 	location?: {
 		city?: string;
 	};
@@ -45,15 +47,32 @@ export default function ProfileScreen() {
 	}, [uid]);
 
 	const postTiles = useMemo(() => {
-		return userPosts.map((post, index) => {
-			const title = post.location?.city || post.description || `Post ${index + 1}`;
-			return `${post.postId || index}:${title}`;
-		});
-	}, [userPosts]);
+		return userPosts.map((post, index) => ({
+			postId: post.postId || String(index),
+			username: session.user?.username || session.user?.email || 'Explorer',
+			description: post.description,
+			imageUrl: post.imageUrl,
+			imageUrls: post.imageUrls,
+			location: post.location,
+			upvotes: post.upvotes,
+			downvotes: post.downvotes,
+		}));
+	}, [userPosts, session.user]);
 
 	const discoveryScore = useMemo(() => {
 		return userPosts.reduce((acc, post) => acc + (post.upvotes || 0) - (post.downvotes || 0), 0);
 	}, [userPosts]);
+
+	const handleEditPress = (postId: string) => {
+		const post = userPosts.find((p) => p.postId === postId);
+		setSelectedPostId(postId);
+		setEditedDescription(post?.description || '');
+	};
+
+	const handleSave = () => {
+		Alert.alert('Saved', 'Description updated.');
+		setSelectedPostId(null);
+	};
 
 	const closeAndDelete = () => {
 		Alert.alert('Post removed', 'Delete logic will be connected to backend in the next step.');
@@ -70,15 +89,17 @@ export default function ProfileScreen() {
 				/>
 
 				<Text style={styles.sectionTitle}>Your discoveries</Text>
-				<UserPostsGrid posts={postTiles} onPostPress={setSelectedPostId} />
-
-				<PostOptionsModal
-					visible={Boolean(selectedPostId)}
-					description={editedDescription}
-					onDescriptionChange={setEditedDescription}
-					onDeletePress={closeAndDelete}
-				/>
+				<UserPostsGrid posts={postTiles} onEditPress={handleEditPress} />
 			</ScrollView>
+
+			<PostOptionsModal
+				visible={Boolean(selectedPostId)}
+				description={editedDescription}
+				onDescriptionChange={setEditedDescription}
+				onSave={handleSave}
+				onDeletePress={closeAndDelete}
+				onClose={() => setSelectedPostId(null)}
+			/>
 		</SafeAreaView>
 	);
 }

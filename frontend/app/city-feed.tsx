@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet } from 'react-native';
 
@@ -12,6 +12,7 @@ type BackendPost = {
 	username?: string;
 	description?: string;
 	imageUrl?: string;
+	imageUrls?: string[];
 	location?: {
 		city?: string;
 	};
@@ -31,6 +32,7 @@ function toExplorePost(post: BackendPost): ExplorePost {
 		city: post.location?.city || post.city || 'Unknown Location',
 		description: post.description || '',
 		imageUrl: post.imageUrl,
+		imageUrls: post.imageUrls,
 		score: post.score ?? upvotes - downvotes,
 	};
 }
@@ -70,7 +72,12 @@ export default function CityFeedScreen() {
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
-			<CityFeedView cityName={cityName} posts={posts} onVote={handleVote} />
+			<CityFeedView
+				cityName={cityName}
+				posts={posts}
+				onVote={handleVote}
+				onSeeOnMap={() => router.push({ pathname: '/(tabs)/map', params: { city: cityName } })}
+			/>
 		</SafeAreaView>
 	);
 }

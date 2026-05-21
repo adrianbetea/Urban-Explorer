@@ -31,16 +31,18 @@ async function verifyFirebaseToken(req, res, next) {
 }
 
 // POST /api/posts
-// Uploads image to S3 and stores post metadata in Firestore.
-router.post('/', upload.single('image'), async (req, res) => {
+// Uploads image(s) to S3 and stores post metadata in Firestore.
+router.post('/', upload.array('images', 10), async (req, res) => {
     try {
         const { description, latitude, longitude, city, userId, username } = req.body;
 
-        if (!req.file) {
+        if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No image file provided.' });
         }
 
-        const imageUrl = await uploadToS3(req.file.buffer, req.file.mimetype);
+        const imageUrls = await Promise.all(
+            req.files.map((file) => uploadToS3(file.buffer, file.mimetype))
+        );
 
         const newPost = {
             userId: userId || 'anonymous_user',
@@ -51,7 +53,8 @@ router.post('/', upload.single('image'), async (req, res) => {
                 longitude: Number(longitude),
                 city: city || 'Unknown Location',
             },
-            imageUrl,
+            imageUrls,
+            imageUrl: imageUrls[0],
             upvotes: 0,
             downvotes: 0,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),

@@ -1,21 +1,51 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { SaveSettingsButton } from '@/components/profile/SaveSettingsButton';
 import { ImageUploader } from '@/components/shared/ImageUploader';
 import { LocationFetcher } from '@/components/shared/LocationFetcher';
-import { createPost } from '@/services/api';
+import { createPost, searchCitySuggestions } from '@/services/api';
 import { getSession } from '@/services/session';
 
 export default function CreatePostModalScreen() {
 	const [description, setDescription] = useState('');
 	const [city, setCity] = useState('Bucharest');
-	const [imageUri, setImageUri] = useState<string | null>(null);
+	const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+	const [imageUris, setImageUris] = useState<string[]>([]);
 	const [coords, setCoords] = useState({ latitude: 44.4268, longitude: 26.1025 });
 
 	const session = getSession();
+
+	useEffect(() => {
+		const trimmed = city.trim();
+		if (trimmed.length < 2) {
+			setCitySuggestions([]);
+			return;
+		}
+
+		const timeoutId = setTimeout(async () => {
+			try {
+				const payload = await searchCitySuggestions(trimmed, { types: '(cities)' });
+				const results = Array.from(new Set(
+					(payload?.data || [])
+						.map((item: { mainText?: string; description?: string }) => item.description || item.mainText || '')
+						.filter(Boolean)
+				));
+				setCitySuggestions(results);
+			} catch {
+				setCitySuggestions([]);
+			}
+		}, 350);
+
+		return () => clearTimeout(timeoutId);
+	}, [city]);
+
+	const selectCity = (selected: string) => {
+		setCity(selected.split(',')[0].trim());
+		setCitySuggestions([]);
+	};
 
 	const handlePickImage = async () => {
 		const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -26,24 +56,29 @@ export default function CreatePostModalScreen() {
 
 		const result = await ImagePicker.launchImageLibraryAsync({
 			mediaTypes: ['images'],
-			allowsEditing: true,
+			allowsMultipleSelection: true,
+			selectionLimit: 10,
 			quality: 0.8,
 		});
 
-		if (!result.canceled && result.assets?.[0]?.uri) {
-			setImageUri(result.assets[0].uri);
+		if (!result.canceled && result.assets?.length > 0) {
+			setImageUris((prev) => [...prev, ...result.assets.map((a) => a.uri)]);
 		}
 	};
 
+	const handleRemoveImage = (index: number) => {
+		setImageUris((prev) => prev.filter((_, i) => i !== index));
+	};
+
 	const handleSubmit = async () => {
-		if (!imageUri) {
-			Alert.alert('Image required', 'Please choose an image before posting.');
+		if (imageUris.length === 0) {
+			Alert.alert('Image required', 'Please choose at least one image before posting.');
 			return;
 		}
 
 		try {
 			await createPost({
-				imageUri,
+				imageUris,
 				description,
 				latitude: coords.latitude,
 				longitude: coords.longitude,
@@ -68,11 +103,34 @@ export default function CreatePostModalScreen() {
 
 				<View style={styles.card}>
 					<ImageUploader onPickImage={handlePickImage} />
-					{imageUri ? <Text style={styles.selectedImageText}>Selected image ready for upload.</Text> : null}
+					{imageUris.length > 0 && (
+						<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnailRow}>
+							{imageUris.map((uri, idx) => (
+								<View key={`thumb-${idx}`} style={styles.thumbnailWrapper}>
+									<Image source={{ uri }} style={styles.thumbnail} />
+									<Pressable onPress={() => handleRemoveImage(idx)} style={styles.removeButton}>
+										<Text style={styles.removeText}>✕</Text>
+									</Pressable>
+								</View>
+							))}
+						</ScrollView>
+					)}
+					{imageUris.length > 0 && (
+						<Text style={styles.selectedImageText}>{imageUris.length} image{imageUris.length > 1 ? 's' : ''} selected</Text>
+					)}
 
 					<View style={styles.fieldGroup}>
 						<Text style={styles.label}>City</Text>
 						<TextInput value={city} onChangeText={setCity} placeholder="City" placeholderTextColor="#8D99A8" style={styles.input} />
+						{citySuggestions.length > 0 && (
+							<View style={styles.suggestionsBox}>
+								{citySuggestions.map((s) => (
+									<Pressable key={s} onPress={() => selectCity(s)} style={styles.suggestionItem}>
+										<Text style={styles.suggestionText}>{s}</Text>
+									</Pressable>
+								))}
+							</View>
+						)}
 					</View>
 
 					<View style={styles.fieldGroup}>
@@ -154,5 +212,50 @@ const styles = StyleSheet.create({
 	selectedImageText: {
 		color: '#1B8A5A',
 		fontSize: 12,
+	},
+	suggestionsBox: {
+		backgroundColor: '#FFFFFF',
+		borderColor: '#D8E3EE',
+		borderRadius: 10,
+		borderWidth: 1,
+		marginTop: 4,
+		overflow: 'hidden',
+	},
+	suggestionItem: {
+		borderBottomColor: '#F0F3F7',
+		borderBottomWidth: 1,
+		paddingHorizontal: 12,
+		paddingVertical: 10,
+	},
+	suggestionText: {
+		color: '#0E2238',
+		fontSize: 14,
+	},
+	thumbnailRow: {
+		gap: 8,
+	},
+	thumbnailWrapper: {
+		position: 'relative',
+	},
+	thumbnail: {
+		borderRadius: 10,
+		height: 80,
+		width: 80,
+	},
+	removeButton: {
+		alignItems: 'center',
+		backgroundColor: 'rgba(0,0,0,0.6)',
+		borderRadius: 10,
+		height: 20,
+		justifyContent: 'center',
+		position: 'absolute',
+		right: 4,
+		top: 4,
+		width: 20,
+	},
+	removeText: {
+		color: '#FFFFFF',
+		fontSize: 12,
+		fontWeight: '700',
 	},
 });
