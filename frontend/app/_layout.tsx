@@ -5,10 +5,6 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export const unstable_settings = {
-  anchor: '(auth)',
-};
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
@@ -17,8 +13,8 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="city-feed" options={{ title: 'City Feed' }} />
-        <Stack.Screen name="profile/settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="city-feed" options={{ title: 'City Feed', headerBackTitle: 'Back' }} />
+        <Stack.Screen name="profile/settings" options={{ title: 'Settings', headerBackTitle: 'Back' }} />
         <Stack.Screen name="create-post-modal" options={{ presentation: 'modal', title: 'Create Post' }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>

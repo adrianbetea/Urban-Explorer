@@ -13,6 +13,7 @@ export type ExplorePost = {
 	imageUrl?: string;
 	imageUrls?: string[];
 	score: number;
+	createdAt?: string | number | null;
 };
 
 type PostCardProps = {
@@ -25,7 +26,7 @@ export function PostCard({ post, onVote }: PostCardProps) {
 
 	return (
 		<View style={styles.card}>
-			<PostHeader username={post.username} city={post.city} />
+			<PostHeader username={post.username} city={post.city} createdAt={post.createdAt} />
 			<ImageGallery imageUrls={urls} />
 			<PostDescription description={post.description} />
 			<InteractionBar score={post.score} onUpvote={() => onVote(post.id, 1)} onDownvote={() => onVote(post.id, -1)} />

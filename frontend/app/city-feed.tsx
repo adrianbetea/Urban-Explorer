@@ -20,11 +20,23 @@ type BackendPost = {
 	upvotes?: number;
 	downvotes?: number;
 	score?: number;
+	createdAt?: any;
 };
 
 function toExplorePost(post: BackendPost): ExplorePost {
 	const upvotes = post.upvotes || 0;
 	const downvotes = post.downvotes || 0;
+
+	let createdAt: string | number | null = null;
+	if (post.createdAt) {
+		if (typeof post.createdAt === 'object' && '_seconds' in post.createdAt) {
+			createdAt = post.createdAt._seconds * 1000;
+		} else if (typeof post.createdAt === 'object' && 'seconds' in post.createdAt) {
+			createdAt = post.createdAt.seconds * 1000;
+		} else {
+			createdAt = post.createdAt;
+		}
+	}
 
 	return {
 		id: post.postId || post.id || `${Date.now()}-${Math.random()}`,
@@ -34,6 +46,7 @@ function toExplorePost(post: BackendPost): ExplorePost {
 		imageUrl: post.imageUrl,
 		imageUrls: post.imageUrls,
 		score: post.score ?? upvotes - downvotes,
+		createdAt,
 	};
 }
 

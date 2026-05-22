@@ -27,7 +27,7 @@ export function PostOptionsModal({
 					<Text style={styles.title}>Edit post</Text>
 					<EditPostForm description={description} onDescriptionChange={onDescriptionChange} />
 					<Pressable style={styles.saveButton} onPress={onSave}>
-						<Text style={styles.saveText}>Save</Text>
+						<Text style={styles.saveText}>Save post</Text>
 					</Pressable>
 					<DeletePostButton onPress={onDeletePress} />
 				</Pressable>

@@ -73,13 +73,39 @@ router.post('/', upload.array('images', 10), async (req, res) => {
     }
 });
 
-// GET /api/posts?limit=10&page=1
+// GET /api/posts?limit=10&page=1&sort=recent|hot|oldest
 // Paginated feed for Explore page.
 router.get('/', async (req, res) => {
     try {
         const { page, limit, offset } = parsePagination(req.query);
+        const sort = req.query.sort || 'recent';
 
-        const baseQuery = db.collection('posts').orderBy('createdAt', 'desc');
+        let baseQuery;
+        if (sort === 'hot') {
+            // For 'hot' sort, fetch all then sort by score in memory
+            const allSnapshot = await db.collection('posts').get();
+            const allPosts = allSnapshot.docs.map((doc) => ({
+                postId: doc.id,
+                ...doc.data(),
+                score: (doc.data().upvotes || 0) - (doc.data().downvotes || 0),
+            }));
+            allPosts.sort((a, b) => b.score - a.score);
+            const total = allPosts.length;
+            const paginatedPosts = allPosts.slice(offset, offset + limit);
+
+            return res.status(200).json({
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+                data: paginatedPosts,
+            });
+        } else if (sort === 'oldest') {
+            baseQuery = db.collection('posts').orderBy('createdAt', 'asc');
+        } else {
+            baseQuery = db.collection('posts').orderBy('createdAt', 'desc');
+        }
+
         const snapshot = await baseQuery.offset(offset).limit(limit).get();
         const countSnapshot = await db.collection('posts').count().get();
         const total = countSnapshot.data().count;
@@ -103,7 +129,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /api/posts/city/:cityName
+// GET /api/posts/city/:cityName?sort=recent|hot
 // Feed filtered by city for Map and Search pages.
 router.get('/city/:cityName', async (req, res) => {
     try {
@@ -111,6 +137,8 @@ router.get('/city/:cityName', async (req, res) => {
         if (!cityName) {
             return res.status(400).json({ error: 'City name is required.' });
         }
+
+        const sort = req.query.sort || 'recent';
 
         const buildPosts = (snapshot) =>
             snapshot.docs.map((doc) => ({
@@ -134,7 +162,10 @@ router.get('/city/:cityName', async (req, res) => {
                 .orderBy('createdAt', 'desc')
                 .get();
 
-            const posts = buildPosts(snapshot);
+            let posts = buildPosts(snapshot);
+            if (sort === 'hot') {
+                posts.sort((a, b) => b.score - a.score);
+            }
             return res.status(200).json({ city: cityName, count: posts.length, data: posts });
         } catch (error) {
             if (error?.code !== 9) {
@@ -147,9 +178,12 @@ router.get('/city/:cityName', async (req, res) => {
                 .where('location.city', '==', cityName)
                 .get();
 
-            const posts = buildPosts(fallbackSnapshot).sort((a, b) => {
-                return getCreatedAtMillis(b.createdAt) - getCreatedAtMillis(a.createdAt);
-            });
+            let posts = buildPosts(fallbackSnapshot);
+            if (sort === 'hot') {
+                posts.sort((a, b) => b.score - a.score);
+            } else {
+                posts.sort((a, b) => getCreatedAtMillis(b.createdAt) - getCreatedAtMillis(a.createdAt));
+            }
 
             return res.status(200).json({ city: cityName, count: posts.length, data: posts, fallback: true });
         }

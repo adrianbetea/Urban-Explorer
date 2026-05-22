@@ -14,13 +14,13 @@ async function handleResponse(response) {
   return payload;
 }
 
-export async function getPosts({ page = 1, limit = 10 } = {}) {
-  const response = await fetch(`${API_BASE_URL}/posts?page=${page}&limit=${limit}`);
+export async function getPosts({ page = 1, limit = 10, sort = 'recent' } = {}) {
+  const response = await fetch(`${API_BASE_URL}/posts?page=${page}&limit=${limit}&sort=${sort}`);
   return handleResponse(response);
 }
 
-export async function getPostsByCity(cityName) {
-  const response = await fetch(`${API_BASE_URL}/posts/city/${encodeURIComponent(cityName)}`);
+export async function getPostsByCity(cityName, { sort = 'recent' } = {}) {
+  const response = await fetch(`${API_BASE_URL}/posts/city/${encodeURIComponent(cityName)}?sort=${sort}`);
   return handleResponse(response);
 }
 

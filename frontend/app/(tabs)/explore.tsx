@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FeedList } from '@/components/explore/FeedList';
 import { ExplorePost } from '@/components/explore/PostCard';
 import { getPosts, votePost } from '@/services/api';
 
 const FEED_PAGE_SIZE = 10;
+
+type SortOption = 'recent' | 'hot' | 'oldest';
+
+const SORT_OPTIONS: { key: SortOption; label: string }[] = [
+  { key: 'recent', label: 'Most Recent' },
+  { key: 'hot', label: 'Most Liked' },
+  { key: 'oldest', label: 'Oldest' },
+];
 
 type BackendPost = {
   postId?: string;
@@ -21,11 +29,23 @@ type BackendPost = {
   upvotes?: number;
   downvotes?: number;
   score?: number;
+  createdAt?: any;
 };
 
 function toExplorePost(post: BackendPost): ExplorePost {
   const upvotes = post.upvotes || 0;
   const downvotes = post.downvotes || 0;
+
+  let createdAt: string | number | null = null;
+  if (post.createdAt) {
+    if (typeof post.createdAt === 'object' && '_seconds' in post.createdAt) {
+      createdAt = post.createdAt._seconds * 1000;
+    } else if (typeof post.createdAt === 'object' && 'seconds' in post.createdAt) {
+      createdAt = post.createdAt.seconds * 1000;
+    } else {
+      createdAt = post.createdAt;
+    }
+  }
 
   return {
     id: post.postId || post.id || `${Date.now()}-${Math.random()}`,
@@ -35,6 +55,7 @@ function toExplorePost(post: BackendPost): ExplorePost {
     imageUrl: post.imageUrl,
     imageUrls: post.imageUrls,
     score: post.score ?? upvotes - downvotes,
+    createdAt,
   };
 }
 
@@ -46,11 +67,12 @@ export default function ExploreScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
 
   const canLoadMore = page < totalPages;
 
-  const fetchPage = useCallback(async (targetPage: number, mode: 'replace' | 'append') => {
-    const payload = await getPosts({ page: targetPage, limit: FEED_PAGE_SIZE });
+  const fetchPage = useCallback(async (targetPage: number, mode: 'replace' | 'append', sort: SortOption) => {
+    const payload = await getPosts({ page: targetPage, limit: FEED_PAGE_SIZE, sort });
     const mappedPosts = (payload?.data || []).map((item: BackendPost) => toExplorePost(item));
 
     setPosts((prev) => (mode === 'replace' ? mappedPosts : [...prev, ...mappedPosts]));
@@ -64,7 +86,7 @@ export default function ExploreScreen() {
       setError(null);
 
       try {
-        await fetchPage(1, 'replace');
+        await fetchPage(1, 'replace', sortBy);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load posts.';
         setError(message);
@@ -74,21 +96,21 @@ export default function ExploreScreen() {
     };
 
     loadInitialFeed();
-  }, [fetchPage]);
+  }, [fetchPage, sortBy]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     setError(null);
 
     try {
-      await fetchPage(1, 'replace');
+      await fetchPage(1, 'replace', sortBy);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to refresh posts.';
       setError(message);
     } finally {
       setRefreshing(false);
     }
-  }, [fetchPage]);
+  }, [fetchPage, sortBy]);
 
   const handleLoadMore = useCallback(async () => {
     if (loadingMore || refreshing || loading || !canLoadMore) {
@@ -97,14 +119,14 @@ export default function ExploreScreen() {
 
     setLoadingMore(true);
     try {
-      await fetchPage(page + 1, 'append');
+      await fetchPage(page + 1, 'append', sortBy);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load more posts.';
       setError(message);
     } finally {
       setLoadingMore(false);
     }
-  }, [canLoadMore, fetchPage, loading, loadingMore, page, refreshing]);
+  }, [canLoadMore, fetchPage, loading, loadingMore, page, refreshing, sortBy]);
 
   const handleVote = useCallback(async (postId: string, delta: 1 | -1) => {
     const previousPosts = posts;
@@ -139,6 +161,19 @@ export default function ExploreScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Explore</Text>
         <Text style={styles.subtitle}>Discover hidden spots shared by the community.</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {SORT_OPTIONS.map((option) => (
+            <Pressable
+              key={option.key}
+              onPress={() => setSortBy(option.key)}
+              style={[styles.filterChip, sortBy === option.key && styles.filterChipActive]}
+            >
+              <Text style={[styles.filterText, sortBy === option.key && styles.filterTextActive]}>
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
       </View>
 
       <FeedList
@@ -172,5 +207,31 @@ const styles = StyleSheet.create({
     color: '#526273',
     fontSize: 14,
     marginTop: 4,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    paddingBottom: 4,
+  },
+  filterChip: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#D8E3EE',
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  filterChipActive: {
+    backgroundColor: '#1A73E8',
+    borderColor: '#1A73E8',
+  },
+  filterText: {
+    color: '#526273',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
   },
 });

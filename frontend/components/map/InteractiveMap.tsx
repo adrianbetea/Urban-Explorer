@@ -5,11 +5,21 @@ import MapView, { LatLng, Region } from 'react-native-maps';
 import { CityMarker } from '@/components/map/CityMarker';
 import { PostMarker } from '@/components/map/PostMarker';
 
+type MapPost = {
+	postId: string;
+	description: string;
+	imageUrl?: string;
+	score: number;
+	coordinate: LatLng;
+};
+
 type InteractiveMapProps = {
 	activeCity: string;
 	cities: string[];
 	cityCoordinates?: Record<string, LatLng>;
 	onCityPress: (city: string) => void;
+	posts?: MapPost[];
+	onPostPress?: (postId: string) => void;
 };
 
 const CITY_COORDINATES: Record<string, LatLng> = {
@@ -25,7 +35,7 @@ const DEFAULT_REGION: Region = {
 	longitudeDelta: 4.8,
 };
 
-export function InteractiveMap({ activeCity, cities, cityCoordinates = {}, onCityPress }: InteractiveMapProps) {
+export function InteractiveMap({ activeCity, cities, cityCoordinates = {}, onCityPress, posts = [], onPostPress }: InteractiveMapProps) {
 	const mapRef = useRef<MapView | null>(null);
 
 	const allCoordinates = useMemo(() => {
@@ -54,8 +64,14 @@ export function InteractiveMap({ activeCity, cities, cityCoordinates = {}, onCit
 	}, [activeCity, allCoordinates]);
 
 	const postMarkers = useMemo(() => {
+		if (posts.length > 0) {
+			return posts.map((post) => ({
+				coordinate: post.coordinate,
+				label: post.score > 5 ? '🔥 Hot' : post.score > 0 ? '⭐ Popular' : '📍 New',
+				postId: post.postId,
+			}));
+		}
 		const coordinate = allCoordinates[activeCity] || DEFAULT_REGION;
-
 		return [
 			{
 				coordinate: {
@@ -63,6 +79,7 @@ export function InteractiveMap({ activeCity, cities, cityCoordinates = {}, onCit
 					longitude: coordinate.longitude + 0.02,
 				},
 				label: 'Top Spot',
+				postId: '',
 			},
 			{
 				coordinate: {
@@ -70,9 +87,10 @@ export function InteractiveMap({ activeCity, cities, cityCoordinates = {}, onCit
 					longitude: coordinate.longitude - 0.018,
 				},
 				label: 'New',
+				postId: '',
 			},
 		];
-	}, [activeCity, allCoordinates]);
+	}, [activeCity, allCoordinates, posts]);
 
 	useEffect(() => {
 		mapRef.current?.animateToRegion(focusRegion, 450);
@@ -98,7 +116,7 @@ export function InteractiveMap({ activeCity, cities, cityCoordinates = {}, onCit
 				))}
 
 				{postMarkers.map((marker) => (
-					<PostMarker key={`${activeCity}-${marker.label}`} label={marker.label} coordinate={marker.coordinate} onPress={() => undefined} />
+					<PostMarker key={`${activeCity}-${marker.label}-${marker.postId}`} label={marker.label} coordinate={marker.coordinate} onPress={() => marker.postId && onPostPress?.(marker.postId)} />
 				))}
 			</MapView>
 		</View>

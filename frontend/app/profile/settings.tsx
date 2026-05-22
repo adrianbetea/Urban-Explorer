@@ -5,9 +5,11 @@ import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-n
 import { SaveSettingsButton } from '@/components/profile/SaveSettingsButton';
 import { UpdatePasswordInput } from '@/components/profile/UpdatePasswordInput';
 import { UpdateUsernameInput } from '@/components/profile/UpdateUsernameInput';
+import { getSession } from '@/services/session';
 
 export default function SettingsScreen() {
-	const [username, setUsername] = useState('Explorer');
+	const session = getSession();
+	const [username, setUsername] = useState(session.user?.username || session.user?.email || '');
 	const [currentPassword, setCurrentPassword] = useState('');
 	const [newPassword, setNewPassword] = useState('');
 

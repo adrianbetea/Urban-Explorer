@@ -8,6 +8,14 @@ import { InteractiveMap } from '@/components/map/InteractiveMap';
 import { SearchBar } from '@/components/search/SearchBar';
 import { getPlaceDetails, getPostsByCity, searchCitySuggestions } from '@/services/api';
 
+export type MapPost = {
+	postId: string;
+	description: string;
+	imageUrl?: string;
+	score: number;
+	coordinate: LatLng;
+};
+
 const CITY_PREVIEWS: Record<string, string[]> = {
 	Bucharest: ['Industrial Hall', 'Graffiti Passage', 'Riverside Depot'],
 	Cluj: ['Old Rail Roof', 'Factory Atrium', 'Underground Gallery'],
@@ -32,7 +40,7 @@ export default function MapScreen() {
 	const [knownCities, setKnownCities] = useState<string[]>(Object.keys(CITY_PREVIEWS));
 	const [mapQuery, setMapQuery] = useState('');
 	const [mapSuggestions, setMapSuggestions] = useState<CitySuggestion[]>([]);
-	const [previews, setPreviews] = useState<string[]>([]);
+	const [previews, setPreviews] = useState<MapPost[]>([]);
 	const countryCode = normalizeCountryCode(process.env.EXPO_PUBLIC_GOOGLE_PLACES_COUNTRY);
 
 	useEffect(() => {
@@ -46,14 +54,24 @@ export default function MapScreen() {
 	useEffect(() => {
 		const loadCityPosts = async () => {
 			try {
-				const payload = await getPostsByCity(activeCity);
-				const descriptions = (payload?.data || [])
-					.map((item: { description?: string; location?: { city?: string } }) => item.description || 'Untitled spot')
-					.slice(0, 5);
+				const payload = await getPostsByCity(activeCity, { sort: 'hot' });
+				const posts = (payload?.data || [])
+					.filter((item: any) => item.location?.latitude && item.location?.longitude)
+					.slice(0, 10)
+					.map((item: any) => ({
+						postId: item.postId || item.id || '',
+						description: item.description || 'Untitled spot',
+						imageUrl: item.imageUrl || (item.imageUrls && item.imageUrls[0]) || undefined,
+						score: item.score ?? ((item.upvotes || 0) - (item.downvotes || 0)),
+						coordinate: {
+							latitude: Number(item.location.latitude),
+							longitude: Number(item.location.longitude),
+						},
+					}));
 
-				setPreviews(descriptions.length ? descriptions : CITY_PREVIEWS[activeCity] || [`No posts in ${activeCity} yet. Be the first to add one.`]);
+				setPreviews(posts.length ? posts : []);
 			} catch {
-				setPreviews(CITY_PREVIEWS[activeCity] || [`No posts in ${activeCity} yet. Be the first to add one.`]);
+				setPreviews([]);
 			}
 		};
 
@@ -159,12 +177,16 @@ export default function MapScreen() {
 				cities={cities}
 				cityCoordinates={cityCoordinates}
 				onCityPress={setActiveCity}
+				posts={previews}
+				onPostPress={(postId) => router.push({ pathname: '/city-feed', params: { city: activeCity } })}
 			/>
 
 			<CityBottomSheet
 				cityName={activeCity}
-				previews={previews}
+				posts={previews}
 				onPostHere={() => router.push('/create-post-modal')}
+				onViewAll={() => router.push({ pathname: '/city-feed', params: { city: activeCity } })}
+				onPostPress={(postId) => router.push({ pathname: '/city-feed', params: { city: activeCity } })}
 			/>
 		</SafeAreaView>
 	);
