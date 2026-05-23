@@ -7,7 +7,8 @@ type SaveSettingsButtonProps = {
 export function SaveSettingsButton({ onPress }: SaveSettingsButtonProps) {
 	return (
 		<Pressable onPress={onPress} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-			<Text style={styles.text}>Save settings</Text>
+			<Text style={styles.text}>Save post
+			</Text>
 		</Pressable>
 	);
 }
